@@ -1,0 +1,100 @@
+<style>* {   box-sizing: border-box; }
+  html, body {  margin: 0;
+    min-height: 100vh;
+    overflow: hidden;   touch-action: none; }
+   canvas {   width: 100%;   height: auto;    object-fit: contain;  }</style><script>
+  window.console = window.console || function(t) {};</script><script>
+  if (document.location.search.match(/type=embed/gi)) {   window.parent.postMessage("resize", "*"); }</script></head>
+<body translate="no"><canvas id="canvas" width="1575" height="454"></canvas><script id="rendered-js">
+const canvas = window.canvas;const gl = canvas.getContext("webgl2");const dpr = Math.max(1, .5 * window.devicePixelRatio);
+const vertexSource = `#version 300 es
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+in vec2 position;
+void main(void) {  gl_Position = vec4(position, 0., 1.);}`;
+const fragmentSource = `#version 300 es
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+out vec4 fragColor;uniform vec2 resolution;uniform float time;
+#define T (-mod(time, 240.))
+#define rot(a) mat2(cos(a),-sin(a),sin(a),cos(a))
+#define hue(a) (1.4*cos(10.3*(a)+vec3(0,83,21)))
+#define bc(p,s) (length(p)-s)
+
+float rp(vec3 p, vec2 s) {p.z -= clamp(p.z,.0, s.y);return bc(p, s.x);}float map(vec3 p)
+ {float ce=-T*2.2; vec3 q = p;p =q-vec3(0);p.z +=ce;float rc= (sin(cos(T)*6.+p.z));p.xy *=rot(p.z*.52);p.xy += vec2(1,1)*rc;float d =4.8,
+rd = .5*rp(p,vec2(max(.05, p.z*1.05), 10.));return rd;}vec3 dir(vec2 uv,vec3 ro,vec3 t,float z){vec3 up = vec3(0, 1, 0),f = normalize(t-ro),
+r= normalize(cross(up, f)),u =cross(f, r),c= f*z,i =c+uv.x*r+uv.y*u;return normalize(i);}void main(void) {vec2 uv= (gl_FragCoord.xy-.5*resolution)/
+min(resolution.x, resolution.y);vec3 col = vec3(0),ro =vec3(0, 0,-8),ta =vec3(0);ro.z -=-T*2.2;vec3 rd = dir(uv, ro, ta, 1.8),
+p =ro;for (float i= .0; i<300.5;i++) {float d =map(p);if (d <1e-3) break;p+=(rd/d)*0.6;}col+=hue(p.z*.05);fragColor=vec4(col, 1);}`;
+  
+let time;
+let buffer;
+let program;
+let resolution;
+let vertices = [];
+function resize() {
+  const { innerWidth: width, innerHeight: height } = window;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  gl.viewport(0, 0, width * dpr, height * dpr);
+  
+}
+function compile(shader, source) {
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+  }
+}
+  
+function setup() {
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  program = gl.createProgram();
+  compile(vs, vertexSource);
+  compile(fs, fragmentSource);
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {   console.error(gl.getProgramInfoLog(program));
+  }
+  vertices = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0];
+  buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  const position = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(position);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  time = gl.getUniformLocation(program, "time");
+  resolution = gl.getUniformLocation(program, "resolution");
+}
+function draw(now) {
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.useProgram(program);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.uniform1f(time, now * 0.001);
+  gl.uniform2f(resolution, canvas.width, canvas.height);
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length * 0.5);
+}
+
+function loop(now) {
+  draw(now);
+  requestAnimationFrame(loop);
+}
+function init() {
+  setup();
+  resize();
+  loop(0);
+}
+document.body.onload = init;
+window.onresize = resize;
+</script>
+</body></html>
