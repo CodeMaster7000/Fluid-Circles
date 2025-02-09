@@ -4,4 +4,6 @@ An abstract art piece (made with HTML) showing the movement of coloured circles,
 
 ### Demo
 
-A sample of the artwork can be seen below: ![Uploading image.png…]()
+A sample of the artwork can be seen below:
+
+![Uploading image.png…]()
